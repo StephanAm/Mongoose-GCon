@@ -1,0 +1,3 @@
+interface:
+  type: dummy
+  delay: 0.1
