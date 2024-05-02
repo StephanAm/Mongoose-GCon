@@ -3,15 +3,15 @@ from paho.mqtt import client as paho_client
 from .logger import Logger
 from .bustypes import BUS_TYPE,topicFromBus, busFromTopic
 from .busio import BusIO
-from .messagedefinitions import CommandMessage, SystemMessage, StatusMessage, MessageFormatError
+from .payloads import Command, System, Message, PayloadFormatError
 
 client_id_prefix="a1b4182c-"
 
 class Module:
-    def __init__(self,module_name,requiredBusses: Iterable[BUS_TYPE]={}}):
-        requiredBusses = requiredBusses|{BUS_TYPE.SYSTEM}
-        self.StatusUP = StatusMessage(module_name,'UP')
-        self.StatusDOWN = StatusMessage(module_name,'DOWN')
+    def __init__(self,module_name,requiredBusses: Iterable[BUS_TYPE]={}):
+        requiredBusses = set(requiredBusses)|{BUS_TYPE.SYSTEM}
+        self.StatusUP = Message(module_name,'UP')
+        self.StatusDOWN = Message(module_name,'DOWN')
         self.module_name = module_name.strip().lower().replace(' ','')
         self.id = client_id_prefix+module_name
         
@@ -26,12 +26,9 @@ class Module:
             topic=topicFromBus(BUS_TYPE.STATUS),
             payload=self.StatusDOWN.serialize(),
         )
-        self.busIO = BusIO(requiredBusses,self.mqtt)
-        self.busIO.set_COMMAND_callback(self.command_callback)
-        self.busIO.set_PANIC_callback(self.system_callback)
-        
+        self.busIO = BusIO(module_name,requiredBusses,self.mqtt)
+        self.busIO.set_SYSTEM_callback(self.system_callback)
         self.mapTopics(requiredBusses)
-        
         self.log = Logger(module_name,self.busIO.send_LOG)
     
     def mapTopics(self,busses:Iterable[BUS_TYPE])->None:
@@ -50,10 +47,12 @@ class Module:
         payload:str = message.payload.decode()
         try:
             self.busIO.handleMessage(bus,payload)
-        except MessageFormatError as x:
+        except PayloadFormatError as x:
             self.log.error(x.message)
+        except Exception as x:
+            self.log.exception(x)
     
-    def system_callback(self, msg:SystemMessage):
+    def system_callback(self, msg:System):
         if msg.command == "PANIC":
             self.log.error('Got a PANIC. Aborting')
             exit(1)

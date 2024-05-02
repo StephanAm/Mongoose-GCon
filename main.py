@@ -1,6 +1,5 @@
 from interfaces import Interface, getInterface
 import config
-import globals
 import gcode
 
 class Progress:
@@ -22,7 +21,7 @@ class Progress:
         return p,r
     
 def main():
-    cfg:config.MongooseConfig = config.load(globals.CONFIG_PATH)
+    cfg:config.MongooseConfig = config.loadConfig()
     interface:Interface = getInterface(cfg.interface)
     parser = gcode.GCodeParser()
     with open('boomerangv4.ncc') as f:
