@@ -1,3 +1,21 @@
-interface:
+gbuslogger:
+  name: G-Bus Logger
+
+diagnostic:
+  name: Diagnostics
+
+gbusinterface:
+  name: G-Bus Interface
   type: dummy
+  waterlevel: 5
+  headroom: 5
   delay: 0.1
+
+gbussource:
+  name: 'File Reader'
+
+statusmonitor:
+  name: Status Monitor
+
+mainwhip:
+  name: Main Whip

@@ -16,8 +16,8 @@ def thowCallbackAlreadySet(bus):
     return thrower
 
 class BusIO:
-    def __init__(self,module_name,required_busses:Iterable[BUS_TYPE],client:paho_client):
-        self.module_name = module_name
+    def __init__(self,mongoose_id,required_busses:Iterable[BUS_TYPE],client:paho_client):
+        self.mongoose_id = mongoose_id
         self.busses:Iterable[BUS_TYPE] = required_busses
         self.client:paho_client.Client = client
         if not BUS_TYPE.COMMAND in required_busses:
@@ -36,15 +36,14 @@ class BusIO:
             callback:Callable[[payloads.Command],None],
             filter:Callable[[payloads.Command],None]=None):
         if not filter:
-            self.COMMAND_callback=callback
-        else:
-            def COMMAND_callback(payload: payloads.Command):
-                if not filter(payload): return
-                callback(payload)
-            self.COMMAND_callback = COMMAND_callback
+            filter = lambda P: P.dest==self.mongoose_id or P.dest=="*"
+        def COMMAND_callback(payload: payloads.Command):
+            if not filter(payload): return
+            callback(payload)
+        self.COMMAND_callback = COMMAND_callback
         self.set_COMMAND_callback=thowCallbackAlreadySet(BUS_TYPE.COMMAND)
     
-    def set_STATUS_callback(self,callback:Callable[[payloads.Message],None]):
+    def set_STATUS_callback(self,callback:Callable[[payloads.Status],None]):
         self.STATUS_callback=callback
         self.set_STATUS_callback=thowCallbackAlreadySet(BUS_TYPE.STATUS)
     
@@ -63,23 +62,29 @@ class BusIO:
     def handleMessage(self, bus:BUS_TYPE, payload:str):
         match bus:
             case BUS_TYPE.COMMAND: self.COMMAND_callback(payloads.Command.deserialize(payload))
-            case BUS_TYPE.STATUS: self.STATUS_callback(payloads.Message.deserialize(payload))
+            case BUS_TYPE.STATUS: self.STATUS_callback(payloads.Status.deserialize(payload))
             case BUS_TYPE.SYSTEM: self.SYSTEM_callback(payloads.System.deserialize(payload))
             case BUS_TYPE.GBUS: self.GBUS_callback(payloads.GBUS.deserialize(payload))
             case BUS_TYPE.LOG: self.LOG_callback(payloads.Log.deserialize(payload))
             case _: raise ValueError(f'{bus} is not a valid bus type')
 
-    def send_COMMAND(self,msg:payloads.Command)->None:
+    def send_COMMAND(self,command:payloads.COMMAND,dest:str='*',**args)->None:
+        msg = payloads.Command(
+            source=self.mongoose_id,
+            dest=dest,
+            command=command,
+            args=args
+        )
         self.client.publish(topicFromBus(BUS_TYPE.COMMAND),msg.serialize())
         
-    def send_STATUS(self,msg:payloads.Message)->None:
+    def send_STATUS(self,msg:payloads.Status)->None:
         self.client.publish(topicFromBus(BUS_TYPE.STATUS),msg.serialize())
     
-    def send_PANIC(self,msg:payloads.System)->None:
+    def send_SYSTEM(self,msg:payloads.System)->None:
         self.client.publish(topicFromBus(BUS_TYPE.SYSTEM),msg.serialize())
     
-    def send_GBUS(self,msg:payloads.GBUS)->None:
-        self.client.publish(topicFromBus(BUS_TYPE.GBUS),msg.serialize())
+    def send_GBUS(self,gcode:str)->None:
+        self.client.publish(topicFromBus(BUS_TYPE.GBUS),payloads.GBUS(gcode).serialize())
     
     def send_LOG(self,msg:payloads.Log)->None:
         self.client.publish(topicFromBus(BUS_TYPE.LOG),msg.serialize())

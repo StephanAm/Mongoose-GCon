@@ -1,5 +1,5 @@
 import string
-from tuitools import colorize_string as cs, Colors
+from tuitools import colorize as cs, Colors
 
 class CodeType:
     COMMENT="COMMENT"
@@ -20,13 +20,13 @@ class GCode:
 
     def format(self):
         if self.type=='COMMENT':
-            return cs(self.comment,Colors.DARK_GREY)
+            return cs(self.comment,Colors.DARK_GRAY)
         s=[]
         for token in self.tokens:
             s.append(cs(token[0],getcolor(token)))
             s.append(token[1:])
             s.append(' ')
-        s.append(cs(self.group,Colors.DARK_GREY))
+        s.append(cs(self.group,Colors.DARK_GRAY))
         return "".join(s)
 
 class GCodeParser:

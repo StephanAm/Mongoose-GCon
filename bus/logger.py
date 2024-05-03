@@ -2,7 +2,7 @@ from .payloads import Log
 dummyFunc = lambda x:...
 
 class Logger:
-    def __init__(self,module_name,sender,verbosity=3):
+    def __init__(self,module_name,sender,verbosity=5):
         self.verbosity=verbosity
         self.module_name=module_name
         self.sender=sender

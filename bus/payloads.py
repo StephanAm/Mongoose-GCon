@@ -1,5 +1,18 @@
 from dataclasses import dataclass,field,asdict
+from . import _module_status
+from enum import Enum
 import json
+
+class COMMAND(str,Enum):
+    RUN="RUN"           # Instructs a Mongoose to start/resum operation
+    PAUSE="PAUSE"       # Instructs a Mongoose to pause operation. Only useful for stateful jobs, i.e. processing a file
+    STOP="STOP"         # Instructs a Mongoose to suspend normal operation
+    SET="SET"           # Instructs a Mongoose to set some value in its internal state.
+
+class SYSTEM_COMMAND(str, Enum):
+    KILL="KILL"
+    PANIC="PANIC"
+    STATUS_UPDATE="STATUS_UPDATE"
 
 class PayloadFormatError(Exception):
     def __init__(self,message,*args,**kwargs):
@@ -20,25 +33,33 @@ class BusPayload:
             raise PayloadFormatError(f'{cls.__name__} was unable to deserialize the message') from x
 
 
-# PANIC="panic"
 @dataclass
 class System(BusPayload):
     source:str
     dest:str
-    command:str
+    command:SYSTEM_COMMAND
+    
+    def __post_init__(self):
+        self.command=SYSTEM_COMMAND(self.command)
 
 # COMMAND="command"
 @dataclass
 class Command(BusPayload):
     source:str
     dest:str
-    command:str
+    command:COMMAND
+    args:dict=field(default_factory=dict)
+    
+    def __post_init__(self):
+        self.command=COMMAND(self.command)
 
 # STATUS="status"
 @dataclass
-class Message(BusPayload):
-    name:str
-    status:str
+class Status(BusPayload):
+    id:str
+    status:_module_status.STATUS=field()
+    def __post_init__(self):
+        self.status = _module_status.STATUS(self.status)
 
 # GBUS="gbus"
 @dataclass
